@@ -67,8 +67,8 @@ public class Controller {
         List<String> dateOfUse = convertDateOfUse(recommendedResults.getDateOfUse());
         List<String> categories = convertCategories(recommendedResults.getCategories());
         LinkedHashMap<String, List<String>> menuResult = new LinkedHashMap<>();
-        for (String name : recommendedResults.getResult().keySet()) {
-            List<String> menuNames = convertMenu(recommendedResults.getResult().get(name));
+        for (String name : recommendedResults.getRecommendResult().keySet()) {
+            List<String> menuNames = convertMenu(recommendedResults.getRecommendResult().get(name));
             menuResult.put(name, menuNames);
         }
         return new RecommendedResultDto(dateOfUse, categories, menuResult);

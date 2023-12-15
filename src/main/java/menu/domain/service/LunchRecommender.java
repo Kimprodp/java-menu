@@ -3,6 +3,7 @@ package menu.domain.service;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 import menu.domain.constants.Category;
 import menu.domain.constants.DayOfWeek;
 
@@ -10,42 +11,42 @@ public class LunchRecommender {
 
     private static final int MAX_COUNT_CATEGORY_DUPLICATES = 2;
 
+    private RecommendedResults recommendedResults;
+
     public RecommendedResults recommendLunch(List<DayOfWeek> dateOfUse, LinkedHashMap<String, List<Menu>> userInfo) {
-        List<Category> categories = recommendCategory(dateOfUse.size());
-        LinkedHashMap<String, List<Menu>> result = new LinkedHashMap<>();
+        recommendedResults = new RecommendedResults(dateOfUse, new ArrayList<>(userInfo.keySet()));
 
-        for (String user : userInfo.keySet()) {
-            List<Menu> menus = recommendMenu(categories, userInfo.get(user));
-            result.put(user, menus);
-        }
-
-        return new RecommendedResults(dateOfUse, categories, result);
-    }
-
-    private List<Category> recommendCategory(int count) {
         List<Category> categories = new ArrayList<>();
-        while (categories.size() != count) {
-            Category category = Category.getRandomCategory();
-            if (isUnderMaxCategory(categories, category)) {
-                categories.add(category);
+        for (int i = 0; i < dateOfUse.size(); i++) {
+            Category category = recommendCategory(categories);
+            categories.add(category);
+
+            for (String user : userInfo.keySet()) {
+                Menu menu = recommendMenu(category, recommendedResults.getUserMenu(user), userInfo.get(user));
+                recommendedResults.addMenu(user, menu);
             }
         }
-        return categories;
+        recommendedResults.addCategory(categories);
+        return recommendedResults;
     }
 
-    private List<Menu> recommendMenu(List<Category> categories, List<Menu> menusToExclude) {
-        List<Menu> menus = new ArrayList<>();
+    private Category recommendCategory(List<Category> categories) {
+        Category category;
+        do {
+            category = Category.getRandomCategory();
+        } while (!isAvailableCategory(categories, category));
+        return category;
+    }
+
+    private Menu recommendMenu(Category category, List<Menu> userRecommendMenu, List<Menu> menusToExclude) {
         String menuName;
-        for (Category category : categories) {
-            do {
-                menuName = category.getRandomMenu();
-            } while (haveSameMenu(menus, menuName) || isExcludeMenu(menusToExclude, menuName));
-            menus.add(new Menu(menuName));
-        }
-        return menus;
+        do {
+            menuName = category.getRandomMenu();
+        } while (haveSameMenu(userRecommendMenu, menuName) || isExcludeMenu(menusToExclude, menuName));
+        return new Menu(menuName);
     }
 
-    private boolean isUnderMaxCategory(List<Category> categories, Category targetCategory) {
+    private boolean isAvailableCategory(List<Category> categories, Category targetCategory) {
         int numberOfInclusions = (int) categories.stream()
                 .filter(category -> category.getCategoryName().equals(targetCategory.getCategoryName()))
                 .count();
@@ -53,8 +54,8 @@ public class LunchRecommender {
         return numberOfInclusions < MAX_COUNT_CATEGORY_DUPLICATES;
     }
 
-    private boolean haveSameMenu(List<Menu> menus, String targetMenu) {
-        return menus.stream()
+    private boolean haveSameMenu(List<Menu> userRecommendMenu, String targetMenu) {
+        return userRecommendMenu.stream()
                 .anyMatch(menu -> menu.getName().equals(targetMenu));
     }
 
